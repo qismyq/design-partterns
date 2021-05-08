@@ -17,14 +17,23 @@ public class DoubleCheckLazySingleton {
 
     /**
      * 公共内存区域，只是声明，在类加载时并未被实例化
-     * ！！使用volatile保证禁止指令重排,因为new DoubleCheckLazySingleton()是一个非原子操作
+     * ！！使用volatile保证禁止指令重排,因为new DoubleCheckLazySingleton()(对象引用赋值)是一个非原子操作
+     * instance = new DoubleCheckLazySingleton()为何为非原子操作:
+     *    此操作分为四步：
+     *      1.栈内存开辟空间给instance引用
+     *      2.堆内存开辟空间准备初始化对象
+     *      3.初始化对象
+     *      4.栈中引用指向堆空间地址
+     *    以上4步是理想状态下的顺序，可当涉及到指令重排时，就会出现1、2、4、3的顺序，因为3和4之间不存在数据依赖，所以可以进行重排序，
+     *    这样就会造成进行if(instance == null)时为true但实际上对象还未被初始化的情况，此时直接return其实是错误的。
+     *
      */
     private volatile static DoubleCheckLazySingleton instance = null;
 
 
     public static DoubleCheckLazySingleton getInstance() {
         // 先判断是否实例化，如果未实例化，则进行实例化
-        // double-check 此处先进行一次判断是为了提高效率，当存在实例时，不需要再进行下边的锁操作
+        // double-check 此处先进行一次判断是为了提高性能效率，当存在实例时，不需要再进行下边的锁操作
         if (instance == null) {
             // 使用synchronized代码块保证原子性
             synchronized (DoubleCheckLazySingleton.class) {
